@@ -1,0 +1,6 @@
+﻿C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Microsoft\VC\v160\Microsoft.CppBuild.targets(513,5): warning MSB8028: The intermediate directory (x64\Debug\) contains files shared from another project (ChatApplication.vcxproj).  This can lead to incorrect clean and rebuild behavior.
+  client_main.cpp
+C:\Users\mprad\Downloads\21f-tcpClientServerExample\tcpClientServerExample\client_main.cpp(139,63): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\mprad\Downloads\21f-tcpClientServerExample\tcpClientServerExample\client_main.cpp(33,6): warning C4101: 'choice': unreferenced local variable
+C:\Users\mprad\Downloads\21f-tcpClientServerExample\tcpClientServerExample\client_main.cpp(47,7): warning C4101: 'getnew': unreferenced local variable
+  ChatApplication.vcxproj -> D:\GDP\netwroking\ChatApplication\x64\Debug\ClientConnection.exe

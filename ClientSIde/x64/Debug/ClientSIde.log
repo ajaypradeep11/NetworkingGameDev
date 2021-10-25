@@ -1,0 +1,7 @@
+﻿C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Microsoft\VC\v160\Microsoft.CppBuild.targets(513,5): warning MSB8028: The intermediate directory (x64\Debug\) contains files shared from another project (ClientSIde.vcxproj).  This can lead to incorrect clean and rebuild behavior.
+  server_main.cpp
+C:\Users\mprad\Downloads\21f-tcpClientServerExample\tcpClientServerExample\server_main.cpp(179,24): warning C4477: 'printf' : format string '%.*s' requires an argument of type 'int', but variadic argument 1 has type 'unsigned __int64'
+C:\Users\mprad\Downloads\21f-tcpClientServerExample\tcpClientServerExample\server_main.cpp(179,24): message : this argument is used as a precision
+C:\Users\mprad\Downloads\21f-tcpClientServerExample\tcpClientServerExample\server_main.cpp(180,74): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+C:\Users\mprad\Downloads\21f-tcpClientServerExample\tcpClientServerExample\server_main.cpp(76,10): warning C4101: 'getnew': unreferenced local variable
+  ClientSIde.vcxproj -> D:\GDP\netwroking\ChatApplication\x64\Debug\ServerConnection.exe

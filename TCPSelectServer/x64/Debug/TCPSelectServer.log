@@ -1,0 +1,8 @@
+﻿  select_server_main.cpp
+D:\GDP\netwroking\ChatApplication\TCPSelectServer\select_server_main.cpp(297,19): warning C4018: '<': signed/unsigned mismatch
+D:\GDP\netwroking\ChatApplication\TCPSelectServer\select_server_main.cpp(353,6): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+D:\GDP\netwroking\ChatApplication\TCPSelectServer\select_server_main.cpp(392,56): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+D:\GDP\netwroking\ChatApplication\TCPSelectServer\select_server_main.cpp(418,58): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+D:\GDP\netwroking\ChatApplication\TCPSelectServer\select_server_main.cpp(192,8): warning C4101: 'SentBytes': unreferenced local variable
+D:\GDP\netwroking\ChatApplication\TCPSelectServer\select_server_main.cpp(190,8): warning C4101: 'flags': unreferenced local variable
+  TCPSelectServer.vcxproj -> D:\GDP\netwroking\ChatApplication\x64\Debug\TCPSelectServer.exe
