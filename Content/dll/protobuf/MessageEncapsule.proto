@@ -1,0 +1,18 @@
+syntax = "proto2";
+
+package protoAuth;
+
+message MessageEncapsule
+{
+	required eMessageType type = 1;
+	required string data = 2;
+	
+   	enum eMessageType {
+		REGISTER = 0;
+    		LOGIN = 1;
+    		LOGINRESPONSE = 2;
+    		REGISTERRESPONSE  = 3;
+		OTHER = 4;
+  	}
+	
+}

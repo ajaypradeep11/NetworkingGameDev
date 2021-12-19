@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package protoAuth;
+
+message RegisterationRespose
+{
+	required int32 reqId = 1;
+	required eRegResult result = 2;
+
+   	enum eRegResult{
+    		SUCCESS = 0;
+		ACCOUNT_ALREADY_EXISTS = 1;
+    		PASSWORD_CONDITION_CHECK = 2;
+    		INTERNAL_SERVER_ERROR = 3;
+  	}
+
+}

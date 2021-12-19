@@ -1,0 +1,2 @@
+﻿  ReqRegister.pb.cc
+D:\GDP\netwroking\Github\NetworkingGameDev\ProtoFiles\ReqRegister.pb.h(10,10): fatal error C1083: Cannot open include file: 'google/protobuf/port_def.inc': No such file or directory

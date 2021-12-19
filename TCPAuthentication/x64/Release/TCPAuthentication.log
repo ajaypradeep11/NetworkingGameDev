@@ -1,0 +1,12 @@
+﻿  authentication_server.cpp
+D:\GDP\netwroking\Github\NetworkingGameDev\TCPAuthentication\authentication_server.cpp(90,13): warning C4244: 'initializing': conversion from 'float' to 'int', possible loss of data
+D:\GDP\netwroking\Github\NetworkingGameDev\TCPAuthentication\authentication_server.cpp(345,57): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+D:\GDP\netwroking\Github\NetworkingGameDev\TCPAuthentication\authentication_server.cpp(379,57): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+D:\GDP\netwroking\Github\NetworkingGameDev\TCPAuthentication\authentication_server.cpp(217,8): warning C4101: 'SentBytes': unreferenced local variable
+D:\GDP\netwroking\Github\NetworkingGameDev\TCPAuthentication\authentication_server.cpp(215,8): warning C4101: 'flags': unreferenced local variable
+  Generating code
+  6 of 558 functions ( 1.1%) were compiled, the rest were copied from previous compilation.
+    1 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  TCPAuthentication.vcxproj -> D:\GDP\netwroking\Github\NetworkingGameDev\x64\Release\TCPAuthentication.exe

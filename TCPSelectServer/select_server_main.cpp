@@ -10,10 +10,35 @@
 #include <map>
 #include <vector>
 
+#include "ReqRegister.pb.h"
+#include "ResRegister.pb.h"
+#include "ResLogin.pb.h"
+#include "ReqLogin.pb.h"
+#include "MessageEncapsule.pb.h"
+
 #pragma comment (lib, "Ws2_32.lib")
 
 #define DEFAULT_BUFLEN 32
 #define DEFAULT_PORT "27016"
+
+enum CreateAccountWebResult
+{
+	SUCCESS,
+	ACCOUNT_ALREADY_EXIST,
+	INVALID_PASSWORD,
+	INTERNAL_SERVER_ERROR,
+	EMAIL_NOT_FOUND,
+	PASSWORD_CONDITION_CHECK
+};
+
+enum MessageResult
+{
+	REGISTER,
+	LOGIN,
+	LOGINRESPONSE,
+	REGISTERRESPONSE,
+	OTHER
+};
 
 // Client structure
 struct ClientInfo {
@@ -33,6 +58,18 @@ ClientInfo* ClientArray[FD_SETSIZE];
 
 std::map<std::string, std::vector<SOCKET>> chatRooms;
 std::vector<SOCKET> socketVector;
+
+std::vector<SOCKET> socketVectorCheck;
+
+PCSTR AuthIp = "127.0.0.1";
+PCSTR AuthPort = "27077";
+SOCKET AuthSocket;
+
+protoAuth::Registeration* registration_req = new protoAuth::Registeration();
+protoAuth::Login* login_req = new protoAuth::Login();
+protoAuth::LoginRespose* login_response = new protoAuth::LoginRespose();
+protoAuth::RegisterationRespose* registration_res = new protoAuth::RegisterationRespose();
+protoAuth::MessageEncapsule* messageEncapsule = new protoAuth::MessageEncapsule();
 
 
 void RemoveClient(int index)
@@ -163,6 +200,65 @@ int main(int argc, char** argv)
 	DWORD RecvBytes;
 	DWORD SentBytes;
 
+
+
+	struct addrinfo* infoResult = NULL; 
+	struct addrinfo* ptr = NULL;
+	ZeroMemory(&hints, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+	iResult = getaddrinfo(AuthIp, AuthPort, &hints, &infoResult);
+	if (iResult != 0)
+	{
+		printf("getaddrinfo failed with error: %d\n", iResult);
+		WSACleanup();
+		return 1;
+	}
+
+	for (ptr = infoResult; ptr != NULL; ptr = ptr->ai_next)
+	{
+
+		AuthSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+		if (AuthSocket == INVALID_SOCKET)
+		{
+			printf("socket failed with error: %ld\n", WSAGetLastError());
+			WSACleanup();
+			return 1;
+		}
+
+		iResult = connect(AuthSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+
+		ClientInfo* info = new ClientInfo();
+		info->socket = AuthSocket;
+		info->bytesRECV = 0;
+		ClientArray[TotalClients] = info;
+		TotalClients++;
+
+		if (iResult == SOCKET_ERROR)
+		{
+			printf("Failed to Connect to Auth %ld\n", WSAGetLastError());
+			closesocket(AuthSocket);
+			AuthSocket = INVALID_SOCKET;
+			continue;
+		}
+		break;
+	}
+
+	freeaddrinfo(infoResult);
+
+	if (AuthSocket == INVALID_SOCKET)
+	{
+		printf("Failed to connect to Authserver!\n");
+		WSACleanup();
+		return 1;
+	}
+
+
+
+
+
+
 	printf("Entering accept/recv/send loop...\n");
 	while (true)
 	{
@@ -226,8 +322,9 @@ int main(int argc, char** argv)
 				total--;
 				client->dataBuf.buf = client->buffer;
 				client->dataBuf.len = DEFAULT_BUFLEN;
-			    charac.buf = client->buffer;
+				charac.buf = client->buffer;
 				DWORD Flags = 0;
+
 				iResult = WSARecv(
 					client->socket,
 					&(client->dataBuf),
@@ -247,171 +344,240 @@ int main(int argc, char** argv)
 				bool checkOutLeave = false;
 				bool checkOutJoin = false;
 				bool dataFound = false;
+
+				//reg and login
+				bool checkRegistered = false;
+				bool checkLoggedIn = false;
 				int count = 0;
+				bool RegUsernameGot = false;
+				bool RegPasswordGot = false;
 
 				std::string s = "";
 				std::string GetMessageGroup = "";
-				for (i = 0; i < client->dataBuf.len; i++) {
-					s = s + client->buffer[i];
-					if ((s == "/connect")|| (s == "\r/connect") && checkCondition) {
-						std::cout << "came in 1";
-						checkCondition = false;
-						checkIfName = true;
-						s = "";
-						i++;
+				std::string RegUsername = "";
+				std::string RegPassword = "";
+
+				messageEncapsule->ParseFromString(client->dataBuf.buf);
+
+				if (messageEncapsule->type() == LOGIN) {
+					login_req->ParseFromString(messageEncapsule->data());
+					socketVectorCheck.push_back(client->socket);
+					std::string useremail = login_req->email();
+					std::string userpass = login_req->password();
+					std::cout << "buffer size :" << client->dataBuf.len << "\n";
+					send(AuthSocket, client->dataBuf.buf, 32, 0);
+				}
+				else if (messageEncapsule->type() == REGISTERRESPONSE) {
+					std::string sentence;
+					registration_res->ParseFromString(messageEncapsule->data());
+					if (SUCCESS == registration_res->result()) {
+						sentence = "Registration Successful";
 					}
-					else if ((s == "/join")||(s == "\r/join")&& checkCondition) {
-						std::cout << "came in 2";
-						checkCondition = false;
-						checkIfJoin = true;
-						s = "";
-						i++;
+					else if (ACCOUNT_ALREADY_EXIST == registration_res->result()) {
+						sentence = "Account Already exist";
 					}
-					else if ((s == "/message")|| (s == "\r/message") && checkCondition) {
-						std::cout << "came in 3";
-						checkCondition = false;
-						checkIfMessage = true;
-						s = "";
-						i++;
+					else if (PASSWORD_CONDITION_CHECK == registration_res->result()) {
+						sentence = "Invalid Password";
 					}
-					else if ((s == "/leave")||(s == "\r/leave")&& checkCondition) {
-						std::cout << "came in 4";
-						checkCondition = false;
-						checkIfLeave = true;
-						s = "";
-						i++;
+					else if (INTERNAL_SERVER_ERROR == registration_res->result()) {
+						sentence = "Internal Server error";
 					}
-					if (checkIfMessage) {
-						if ((s == "Networking") || (s == "Graphics") || (s == "Media") || (s == "Physics")) {
-							GetMessageGroup = s;
+					
+					send(socketVectorCheck.back(), sentence.c_str(), 32, 0);
+				}
+				else if (messageEncapsule->type() == LOGINRESPONSE) {
+					std::string sentence;
+					login_response->ParseFromString(messageEncapsule->data());
+					std::cout << "vanakam " << login_response->result();
+					if (SUCCESS == login_response->result()) {
+						sentence = "Login Successful";
+					}
+					else if (INVALID_PASSWORD == login_response->result()) {
+						sentence = "Invalid Password";
+					}
+					else if (INTERNAL_SERVER_ERROR == login_response->result()) {
+						sentence = "Internal Server error";
+					}
+					else if (EMAIL_NOT_FOUND == login_response->result()) {
+						sentence = "Email not found";
+					}
+					send(socketVectorCheck.back(), sentence.c_str(), 32, 0);
+				}
+
+					
+					
+				
+				else {
+					for (i = 0; i < client->dataBuf.len; i++) {
+						s = s + client->buffer[i];
+
+						if ((s == "/connect") || (s == "\r/connect") && checkCondition) {
+							std::cout << "came in 1";
+							checkCondition = false;
+							checkIfName = true;
 							s = "";
 							i++;
-							checkOutMessage = true;
 						}
-					}
-					if (checkIfJoin) {
-						count++;
-						if ((s == "Networking") || (s == "Graphics") || (s == "Media") || (s == "Physics")) {
-							checkOutJoin = true;
-							break;
+						else if ((s == "/join") || (s == "\r/join") && checkCondition) {
+							std::cout << "came in 2";
+							checkCondition = false;
+							checkIfJoin = true;
+							s = "";
+							i++;
+						}
+						else if ((s == "/message") || (s == "\r/message") && checkCondition) {
+							std::cout << "came in 3";
+							checkCondition = false;
+							checkIfMessage = true;
+							s = "";
+							i++;
+						}
+						else if ((s == "/leave") || (s == "\r/leave") && checkCondition) {
+							std::cout << "came in 4";
+							checkCondition = false;
+							checkIfLeave = true;
+							s = "";
+							i++;
+						}
+						if (checkIfMessage) {
+							if ((s == "Networking") || (s == "Graphics") || (s == "Media") || (s == "Physics")) {
+								GetMessageGroup = s;
+								s = "";
+								i++;
+								checkOutMessage = true;
+							}
+						}
+						if (checkIfJoin) {
+							count++;
+							if ((s == "Networking") || (s == "Graphics") || (s == "Media") || (s == "Physics")) {
+								checkOutJoin = true;
+								break;
+							}
+
+						}if (checkIfLeave) {
+							count++;
+							if ((s == "Networking") || (s == "Graphics") || (s == "Media") || (s == "Physics")) {
+								checkOutLeave = true;
+								break;
+							}
 						}
 
-					}if (checkIfLeave) {
-						count++;
-						if ((s == "Networking") || (s == "Graphics") || (s == "Media") || (s == "Physics")) {
-							checkOutLeave = true;
-							break;
+					}
+
+					if (checkIfName) {
+
+						for (int i = s.length() - 1; i > 0; i--) {
+							if (s[i] != '\0') {
+								client->dataBuf.len = i;
+								break;
+							}
+						}
+						client->name = s.substr(0, client->dataBuf.len + 1);
+						std::cout << "\n" << client->name;
+					}
+					else  if (checkOutJoin) {
+
+						client->toJoin = s.substr(0, count - 1);
+						std::cout << "\n" << client->toJoin;
+
+						for (it = chatRooms.begin(); it != chatRooms.end(); it++)
+						{
+							std::string a = it->first;
+							std::string b = client->toJoin;
+
+							if (a.compare(b) == 0) {
+								it->second.push_back(client->socket);
+								client->group = s.substr(0, count - 1);
+								break;
+							}
+							std::cout << it->first << "over" << std::endl;
+							std::cout << client->toJoin << "over" << std::endl;
+						}
+
+						for (it = chatRooms.begin(); it != chatRooms.end(); it++)
+						{
+							char ph[32];
+							std::string name1 = " has joined the room";
+							std::string name = client->name;
+							std::string joiningword = name.append(name1);
+
+							for (int i = 0; i < joiningword.length(); i++) {
+								ph[i] = joiningword[i];
+							}
+							if ((it->first == client->group)) {
+								for (int i = 0; i < it->second.size(); i++) {
+									send(it->second[i], ph, joiningword.length(), 0);
+								}
+							}
+						}
+
+					}
+					else  if (checkOutLeave) {
+						client->toLeave = s.substr(0, count - 1);
+						std::cout << "\n" << client->toLeave;
+						for (it = chatRooms.begin(); it != chatRooms.end(); it++)
+						{
+							char sh[32];
+							std::string name1 = " has Left the room";
+							std::string name = client->name;
+							std::string joiningword = name.append(name1);
+
+							for (int i = 0; i < joiningword.length(); i++) {
+								sh[i] = joiningword[i];
+							}
+							if ((it->first == client->toLeave)) {
+								for (int i = 0; i < it->second.size(); i++) {
+									if (it->second[i] == client->socket) {
+										for (int j = 0; j < it->second.size(); j++) {
+											checkOutLeave = false;
+											send(it->second[j], sh, joiningword.length(), 0);
+										}
+										it->second.erase(it->second.begin() + i);
+										client->group = "";
+										dataFound = true;
+										break;
+
+									}
+								}
+							}
+						}
+
+					}
+					else  if (checkOutMessage) {
+						client->Message = s.substr(0, client->dataBuf.len - 1);
+						std::cout << "\n" << client->Message;
+						char ph[60];
+
+						for (int i = 0; i < client->Message.length(); i++) {
+							ph[i] = client->Message[i];
+						}
+						for (it = chatRooms.begin(); it != chatRooms.end(); it++)
+						{
+							if ((it->first == GetMessageGroup)) {
+								for (int i = 0; i < it->second.size(); i++) {
+									if (it->second[i] == client->socket) {
+										for (int j = 0; j < it->second.size(); j++) {
+											send(it->second[j], ph, DEFAULT_BUFLEN, 0);
+										}
+
+									}
+
+								}
+							}
 						}
 					}
+					else {
+						continue;
+					}
+
+					if ((!dataFound) && (checkOutLeave))
+						send(client->socket, "You are not in the Group", DEFAULT_BUFLEN, 0);
+
+					count = 0;
 				}
 
-				if (checkIfName) {
+
 				
-					for (int i = s.length() - 1; i > 0; i--) {
-						if (s[i] != '\0') {
-							client->dataBuf.len = i;
-							break;
-						}
-					}
-					client->name = s.substr(0, client->dataBuf.len + 1);
-					std::cout << "\n" << client->name;
-				}else  if (checkOutJoin) {
-					
-					client->toJoin = s.substr(0, count-1);
-					std::cout << "\n"<<client->toJoin;
-
-					for (it = chatRooms.begin(); it != chatRooms.end(); it++)
-					{
-						std::string a = it->first;
-						std::string b = client->toJoin;
-
-						if (a.compare(b) == 0) {
-							it->second.push_back(client->socket);
-							client->group = s.substr(0, count - 1);
-							break;
-						}
-						std::cout << it->first << "over"<< std::endl;
-						std::cout << client->toJoin << "over" << std::endl;
-					}
-
-					for (it = chatRooms.begin(); it != chatRooms.end(); it++)
-					{
-						char ph[32];
-						std::string name1 = " has joined the room";
-						std::string name = client->name;
-						std::string joiningword = name.append(name1);
-
-						for (int i = 0; i < joiningword.length(); i++) {
-							ph[i] = joiningword[i];
-						}
-						if ((it->first == client->group)) {
-							for (int i = 0; i < it->second.size(); i++) {
-								send(it->second[i], ph, joiningword.length(), 0);
-							}
-						}
-					}
-
-				}else  if (checkOutLeave) {
-					client->toLeave = s.substr(0, count-1);
-					std::cout << "\n" << client->toLeave;
-					for (it = chatRooms.begin(); it != chatRooms.end(); it++)
-					{
-						char sh[32];
-						std::string name1 = " has Left the room";
-						std::string name = client->name;
-						std::string joiningword = name.append(name1);
-
-						for (int i = 0; i < joiningword.length(); i++) {
-							sh[i] = joiningword[i];
-						}
-						if ((it->first == client->toLeave)) {
-							for (int i = 0; i < it->second.size();i++) {
-								if (it->second[i] == client->socket) {
-									for (int j = 0; j < it->second.size(); j++) {
-										checkOutLeave = false;
-										send(it->second[j], sh, joiningword.length(), 0);
-									}
-									it->second.erase(it->second.begin() + i); 
-									client->group = "";
-									dataFound = true;
-									break;
-									
-								}
-							}
-						}
-					}
-
-				}else  if (checkOutMessage) {
-					client->Message = s.substr(0, client->dataBuf.len - 1);
-					std::cout << "\n" << client->Message;
-					char ph[60];
-
-					for (int i = 0; i < client->Message.length();i++) {
-						ph[i] = client->Message[i];
-					}
-					for (it = chatRooms.begin(); it != chatRooms.end(); it++)
-					{
-						if ((it->first == GetMessageGroup)) {
-							for (int i = 0; i < it->second.size(); i++) {
-								if (it->second[i] == client->socket) {
-									for (int j = 0; j < it->second.size(); j++) {
-										send(it->second[j], ph, DEFAULT_BUFLEN, 0);
-									}
-									
-								}
-								
-							}
-						}
-					}
-				}
-				else {
-					continue;
-				}
-
-				if((!dataFound)&&(checkOutLeave) )
-					send(client->socket, "You are not in the Group", DEFAULT_BUFLEN, 0);
-
-				count = 0;
 
 
 				if (iResult == SOCKET_ERROR)
